@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.1.0</Version>
+    <!-- Version is managed by Nerdbank.GitVersioning (see version.json) -->
     <Authors>Nexus Software Labs</Authors>
     <Product>AmpSharp - Amplitude Experiment C# SDK</Product>
     <Description>Unofficial C# SDK for Amplitude Experiment remote evaluation by Nexus Software Labs</Description>
@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

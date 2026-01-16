@@ -4,6 +4,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Build/versioning dependencies -->
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.146" />
+
     <!-- Main library dependencies -->
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
