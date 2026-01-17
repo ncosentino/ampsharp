@@ -467,6 +467,241 @@ public sealed class ServiceCollectionExtensionsTests
 
     #endregion
 
+    #region AddAmplitudeExperimentWithExistingCache Tests
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_UsesPreviouslyRegisteredHybridCache()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        
+        // Simulate user registering their own HybridCache (like FusionCache.AsHybridCache())
+        services.AddHybridCache();
+        
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+        Assert.IsType<CachingRemoteEvaluationClient>(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_ThrowsIfHybridCacheNotRegistered()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        
+        // Don't register HybridCache - simulate user forgetting to register it
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey);
+        using var provider = services.BuildServiceProvider();
+
+        // Act & Assert - should throw when trying to resolve because HybridCache isn't registered
+        Assert.Throws<InvalidOperationException>(() =>
+            provider.GetRequiredService<IRemoteEvaluationClient>());
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_ThrowsOnNullDeploymentKey()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() =>
+            services.AddAmplitudeExperimentWithExistingCache(null!));
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_ThrowsOnEmptyDeploymentKey()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() =>
+            services.AddAmplitudeExperimentWithExistingCache(""));
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_AcceptsNullConfig()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, config: null);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_AcceptsNullCachingOptions()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, config: null, cachingOptions: null);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_AcceptsCustomConfig()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        var config = new RemoteEvaluationConfig
+        {
+            ServerZone = ServerZone.EU,
+            FetchTimeoutMillis = 5000
+        };
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, config);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+        Assert.IsType<CachingRemoteEvaluationClient>(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_AcceptsCustomCachingOptions()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        var cachingOptions = new CachingOptions
+        {
+            CacheKeyPrefix = "custom-prefix",
+            AbsoluteExpiration = TimeSpan.FromMinutes(10)
+        };
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, cachingOptions: cachingOptions);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_ReturnsSameServiceCollectionForChaining()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+
+        // Act
+        var result = services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey);
+
+        // Assert
+        Assert.Same(services, result);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_WithActions_ConfiguresBothOptions()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        var configActionCalled = false;
+        var cachingActionCalled = false;
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(
+            ValidDeploymentKey,
+            configureOptions: config =>
+            {
+                configActionCalled = true;
+                config.ServerZone = ServerZone.EU;
+            },
+            configureCaching: caching =>
+            {
+                cachingActionCalled = true;
+                caching.CacheKeyPrefix = "test";
+            });
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        Assert.True(configActionCalled);
+        Assert.True(cachingActionCalled);
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+        Assert.IsType<CachingRemoteEvaluationClient>(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_WithActions_AcceptsNullActions()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(
+            ValidDeploymentKey,
+            configureOptions: null,
+            configureCaching: null);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_RegistersAsSingleton()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey);
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var client1 = provider.GetRequiredService<IRemoteEvaluationClient>();
+        var client2 = provider.GetRequiredService<IRemoteEvaluationClient>();
+
+        // Assert
+        Assert.Same(client1, client2);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_DoesNotRegisterAnotherHybridCache()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        var initialHybridCacheDescriptors = services.Count(s => s.ServiceType == typeof(HybridCache));
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey);
+        var finalHybridCacheDescriptors = services.Count(s => s.ServiceType == typeof(HybridCache));
+
+        // Assert - should not have added any new HybridCache registrations
+        Assert.Equal(initialHybridCacheDescriptors, finalHybridCacheDescriptors);
+    }
+
+    #endregion
+
     #region Configuration Integration Tests
 
     [Fact]

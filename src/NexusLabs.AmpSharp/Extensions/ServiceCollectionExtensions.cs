@@ -54,13 +54,18 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Adds Amplitude Experiment remote evaluation client with caching to the service collection.
-    /// Uses HybridCache with in-memory caching by default.
+    /// Registers the default HybridCache with in-memory caching.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="deploymentKey">The Amplitude deployment key.</param>
     /// <param name="config">Optional remote evaluation configuration.</param>
     /// <param name="cachingOptions">Optional caching options. If not provided, uses defaults.</param>
     /// <returns>The service collection for chaining.</returns>
+    /// <remarks>
+    /// This method registers the default in-memory HybridCache. If you have already registered
+    /// a HybridCache (e.g., via FusionCache's <c>.AsHybridCache()</c>), use 
+    /// <see cref="AddAmplitudeExperimentWithExistingCache(IServiceCollection, string, RemoteEvaluationConfig?, CachingOptions?)"/> instead.
+    /// </remarks>
     public static IServiceCollection AddAmplitudeExperimentWithCaching(
         this IServiceCollection services,
         string deploymentKey,
@@ -73,7 +78,7 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Adds Amplitude Experiment remote evaluation client with caching using configuration actions.
-    /// Uses HybridCache with in-memory caching by default.
+    /// Registers the default HybridCache with in-memory caching.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="deploymentKey">The Amplitude deployment key.</param>
@@ -93,6 +98,58 @@ public static class ServiceCollectionExtensions
         configureCaching?.Invoke(cachingOptions);
 
         services.AddHybridCache();
+        return AddAmplitudeExperimentWithCachingCore(services, deploymentKey, config, cachingOptions);
+    }
+
+    /// <summary>
+    /// Adds Amplitude Experiment remote evaluation client with caching, using an existing HybridCache.
+    /// Does NOT register HybridCache - assumes it is already registered.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="deploymentKey">The Amplitude deployment key.</param>
+    /// <param name="config">Optional remote evaluation configuration.</param>
+    /// <param name="cachingOptions">Optional caching options. If not provided, uses defaults.</param>
+    /// <returns>The service collection for chaining.</returns>
+    /// <remarks>
+    /// Use this method when you have already registered HybridCache, such as with FusionCache:
+    /// <code>
+    /// services.AddFusionCache()
+    ///     .TryWithAutoSetup()
+    ///     .AsHybridCache();
+    /// 
+    /// services.AddAmplitudeExperimentWithExistingCache("your-deployment-key");
+    /// </code>
+    /// </remarks>
+    public static IServiceCollection AddAmplitudeExperimentWithExistingCache(
+        this IServiceCollection services,
+        string deploymentKey,
+        RemoteEvaluationConfig? config = null,
+        CachingOptions? cachingOptions = null)
+    {
+        return AddAmplitudeExperimentWithCachingCore(services, deploymentKey, config, cachingOptions);
+    }
+
+    /// <summary>
+    /// Adds Amplitude Experiment remote evaluation client with caching using configuration actions,
+    /// using an existing HybridCache. Does NOT register HybridCache - assumes it is already registered.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="deploymentKey">The Amplitude deployment key.</param>
+    /// <param name="configureOptions">Action to configure the remote evaluation options.</param>
+    /// <param name="configureCaching">Action to configure the caching options.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddAmplitudeExperimentWithExistingCache(
+        this IServiceCollection services,
+        string deploymentKey,
+        Action<RemoteEvaluationConfig>? configureOptions,
+        Action<CachingOptions>? configureCaching = null)
+    {
+        var config = new RemoteEvaluationConfig();
+        configureOptions?.Invoke(config);
+
+        var cachingOptions = new CachingOptions();
+        configureCaching?.Invoke(cachingOptions);
+
         return AddAmplitudeExperimentWithCachingCore(services, deploymentKey, config, cachingOptions);
     }
 
