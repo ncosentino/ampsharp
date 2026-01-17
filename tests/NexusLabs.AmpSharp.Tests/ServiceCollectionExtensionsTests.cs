@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -51,10 +52,11 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        string nullKey = null!;
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            services.AddAmplitudeExperiment(null!));
+            services.AddAmplitudeExperiment(nullKey));
     }
 
     [Fact]
@@ -84,9 +86,10 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        RemoteEvaluationConfig? nullConfig = null;
 
         // Act
-        services.AddAmplitudeExperiment(ValidDeploymentKey, config: null);
+        services.AddAmplitudeExperiment(ValidDeploymentKey, nullConfig);
         using var provider = services.BuildServiceProvider();
 
         // Assert
@@ -153,9 +156,10 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        Action<RemoteEvaluationConfig>? nullAction = null;
 
         // Act
-        services.AddAmplitudeExperiment(ValidDeploymentKey, configureOptions: null!);
+        services.AddAmplitudeExperiment(ValidDeploymentKey, nullAction!);
         using var provider = services.BuildServiceProvider();
 
         // Assert
@@ -192,6 +196,55 @@ public sealed class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperiment_WithFactory_ResolvesKeyFromServiceProvider()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Amplitude:DeploymentKey"] = ValidDeploymentKey
+            })
+            .Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // Act
+        services.AddAmplitudeExperiment(
+            sp => sp.GetRequiredService<IConfiguration>()["Amplitude:DeploymentKey"]!);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+        Assert.IsType<RemoteEvaluationClient>(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperiment_WithFactory_ThrowsOnNullFactory()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        Func<IServiceProvider, string>? nullFactory = null;
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            services.AddAmplitudeExperiment(nullFactory!, config: null));
+    }
+
+    [Fact]
+    public void AddAmplitudeExperiment_WithFactory_ValidatesKeyAtResolutionTime()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddAmplitudeExperiment(_ => "", config: null);
+        using var provider = services.BuildServiceProvider();
+
+        // Act & Assert - should throw when resolving because key is empty
+        Assert.Throws<ArgumentException>(() =>
+            provider.GetRequiredService<IRemoteEvaluationClient>());
     }
 
     #endregion
@@ -235,10 +288,11 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        string nullKey = null!;
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            services.AddAmplitudeExperimentWithCaching(null!));
+            services.AddAmplitudeExperimentWithCaching(nullKey));
     }
 
     [Fact]
@@ -268,9 +322,10 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        RemoteEvaluationConfig? nullConfig = null;
 
         // Act
-        services.AddAmplitudeExperimentWithCaching(ValidDeploymentKey, config: null);
+        services.AddAmplitudeExperimentWithCaching(ValidDeploymentKey, nullConfig);
         using var provider = services.BuildServiceProvider();
 
         // Assert
@@ -283,9 +338,11 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        RemoteEvaluationConfig? nullConfig = null;
+        CachingOptions? nullCachingOptions = null;
 
         // Act
-        services.AddAmplitudeExperimentWithCaching(ValidDeploymentKey, config: null, cachingOptions: null);
+        services.AddAmplitudeExperimentWithCaching(ValidDeploymentKey, nullConfig, nullCachingOptions);
         using var provider = services.BuildServiceProvider();
 
         // Assert
@@ -465,6 +522,42 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(httpClientFactory);
     }
 
+    [Fact]
+    public void AddAmplitudeExperimentWithCaching_WithFactory_ResolvesKeyFromServiceProvider()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Amplitude:DeploymentKey"] = ValidDeploymentKey
+            })
+            .Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // Act
+        services.AddAmplitudeExperimentWithCaching(
+            sp => sp.GetRequiredService<IConfiguration>()["Amplitude:DeploymentKey"]!);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+        Assert.IsType<CachingRemoteEvaluationClient>(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithCaching_WithFactory_ThrowsOnNullFactory()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        Func<IServiceProvider, string>? nullFactory = null;
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            services.AddAmplitudeExperimentWithCaching(nullFactory!, config: null));
+    }
+
     #endregion
 
     #region AddAmplitudeExperimentWithExistingCache Tests
@@ -509,10 +602,11 @@ public sealed class ServiceCollectionExtensionsTests
         // Arrange
         var services = new ServiceCollection();
         services.AddHybridCache();
+        string nullKey = null!;
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            services.AddAmplitudeExperimentWithExistingCache(null!));
+            services.AddAmplitudeExperimentWithExistingCache(nullKey));
     }
 
     [Fact]
@@ -533,9 +627,10 @@ public sealed class ServiceCollectionExtensionsTests
         // Arrange
         var services = new ServiceCollection();
         services.AddHybridCache();
+        RemoteEvaluationConfig? nullConfig = null;
 
         // Act
-        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, config: null);
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, nullConfig);
         using var provider = services.BuildServiceProvider();
 
         // Assert
@@ -549,9 +644,11 @@ public sealed class ServiceCollectionExtensionsTests
         // Arrange
         var services = new ServiceCollection();
         services.AddHybridCache();
+        RemoteEvaluationConfig? nullConfig = null;
+        CachingOptions? nullCachingOptions = null;
 
         // Act
-        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, config: null, cachingOptions: null);
+        services.AddAmplitudeExperimentWithExistingCache(ValidDeploymentKey, nullConfig, nullCachingOptions);
         using var provider = services.BuildServiceProvider();
 
         // Assert
@@ -698,6 +795,44 @@ public sealed class ServiceCollectionExtensionsTests
 
         // Assert - should not have added any new HybridCache registrations
         Assert.Equal(initialHybridCacheDescriptors, finalHybridCacheDescriptors);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_WithFactory_ResolvesKeyFromServiceProvider()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Amplitude:DeploymentKey"] = ValidDeploymentKey
+            })
+            .Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // Act
+        services.AddAmplitudeExperimentWithExistingCache(
+            sp => sp.GetRequiredService<IConfiguration>()["Amplitude:DeploymentKey"]!);
+        using var provider = services.BuildServiceProvider();
+
+        // Assert
+        var client = provider.GetService<IRemoteEvaluationClient>();
+        Assert.NotNull(client);
+        Assert.IsType<CachingRemoteEvaluationClient>(client);
+    }
+
+    [Fact]
+    public void AddAmplitudeExperimentWithExistingCache_WithFactory_ThrowsOnNullFactory()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        Func<IServiceProvider, string>? nullFactory = null;
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            services.AddAmplitudeExperimentWithExistingCache(nullFactory!, config: null));
     }
 
     #endregion
