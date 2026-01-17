@@ -7,6 +7,11 @@ namespace NexusLabs.AmpSharp.Models;
 /// </summary>
 public sealed class RemoteEvaluationConfig
 {
+    private static readonly Lazy<RemoteEvaluationConfig> _defaultInstance =
+        new(() => new RemoteEvaluationConfig());
+
+    public static RemoteEvaluationConfig Default => _defaultInstance.Value;
+
     /// <summary>
     /// The server zone for data residency. Default is US.
     /// </summary>

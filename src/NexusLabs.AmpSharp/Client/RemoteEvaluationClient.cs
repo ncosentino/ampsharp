@@ -23,11 +23,12 @@ public sealed class RemoteEvaluationClient : IRemoteEvaluationClient
         HttpClient httpClient,
         string deploymentKey,
         RemoteEvaluationConfig? config = null)
+        : this(
+            httpClient,
+            deploymentKey,
+            config ?? RemoteEvaluationConfig.Default,
+            (config ?? RemoteEvaluationConfig.Default).Logger ?? NullLogger.Instance)
     {
-        config ??= new RemoteEvaluationConfig();
-        _logger = config.Logger ?? NullLogger.Instance;
-
-        _apiClient = new ExperimentApiClient(httpClient, deploymentKey, config, _logger);
     }
 
     /// <summary>
@@ -49,10 +50,7 @@ public sealed class RemoteEvaluationClient : IRemoteEvaluationClient
         FetchOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         // Inject library context
         user.Library ??= "NexusLabs.AmpSharp/0.1.0";
